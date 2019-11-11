@@ -21,7 +21,7 @@ class Cart {
         return items.stream().mapToInt(o -> o.getPrice()).sum();
     }
     
-    public void buy(int pay) {
+    public int buy(int pay) {
         int sum = calculateTotalFee(); 
         
         if (pay < sum) throw RuntimeException("요금이 부족합니다.");
@@ -36,7 +36,7 @@ class Cart {
 
 ```java
 enum PayType {
-    DOLLAR, YEN
+    DOLLAR, YEN, WON
 }
 
 class Item {
@@ -52,6 +52,8 @@ class Cart {
     
     private int calculateExchangeFee(PayType payType, int pay) {
         switch(payType) {
+            case WON:
+                return pay;
             case DOLLAR:
                 return pay * 1165;
             case YEN:
@@ -59,7 +61,7 @@ class Cart {
         }
     }
     
-    public void buy(int pay, PayType payType) {
+    public int buy(int pay, PayType payType) {
         int sum = calculateTotalFee(); 
         
         double exchangedFee = calculateExchangeFee(payType, pay);
@@ -77,6 +79,15 @@ class Cart {
 ```java
 interface PayType {
     int calculateExchangeFee(int pay);
+}
+
+class WonPayType implements PayType {
+    int exchangeRate = 1;
+    
+    @Override
+    int calculateExchangeFee(int pay) {
+        return pay * exchangeRate;
+    }
 }
 
 class YenPayType implements PayType {
@@ -108,11 +119,11 @@ class Cart {
         return items.stream().mapToInt(o -> o.getPrice()).sum();
     }
     
-    public void buy(int pay, PayType payType) {
+    public int buy(int pay, PayType payType) {
         int sum = calculateTotalFee(); 
         
-        double exchangedFee = payType.calculateExchangeFee(payType, pay);
-        if (exchangedFee < sum) throw RuntimeException("요금이 부족합니다.");
+        double exchangedFee = payType.calculateExchangeFee(pay);
+        if (exchangedFee < sum) throw new RuntimeException("요금이 부족합니다.");
         
         return pay - sum;
     }
@@ -120,8 +131,9 @@ class Cart {
 ```
 
 이런식으로 구현을 하고 클라이언트에서 어떤 payType 을 사용할지 지정해준다면  
-새로운 PayType 이 추가되거나 환율이 변경된다고 하더라도 Cart 도메인 객체는 변경으로부터 안전하다.
+새로운 PayType 이 추가되거나 환율이 변경된다고 하더라도 Cart 도메인 객체는 변경으로부터 안전하다.  
 
 **달라지는 부분을 찾아내고, 달라지지 않는 부분으로부터 분리한다.** 라는 디자인 원칙 1번을 사용하여,  
-달라지는 부분인 환율과, 추가될수 있는 PayType 을 달라지지 않는 Cart 로부터 분리하였다.  
-새로운 PayType 인 유로화가 추가된다 하더라도, 단순히 PayType 을 구현하는 구현체를 만들고, 클라이언트에서 사용하게 하면 된다.
+달라지는 부분인 환율과, 추가될수 있는 PayType 을 스트래티지 패턴을 이용하여 분리하였다.  
+새로운 PayType 인 유로화가 추가된다 하더라도, 단순히 PayType 을 구현하는 구현체를 만들고, 클라이언트에서 사용하게 하면 된다.  
+클라이언트는 동적으로 전략을 선택할 수 있는 장점도 있다.
