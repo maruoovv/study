@@ -32,7 +32,7 @@ class Cart {
 ```
 
 외국인의 방문이 많아져 엔화, 달러화도 결제가 가능하게 바뀌어야 한다.
-buy 메소드 내부에 환율 계산을 적용한다.
+환율 계산을 하는 내부 메소드를 적용한다.
 
 ```java
 enum PayType {
@@ -50,7 +50,7 @@ class Cart {
         return items.stream().mapToInt(o -> o.getPrice()).sum();
     }
     
-    private double calculateExchangeFee(PayType payType, int pay) {
+    private int calculateExchangeFee(PayType payType, int pay) {
         switch(payType) {
             case DOLLAR:
                 return pay * 1165;
@@ -76,23 +76,23 @@ class Cart {
 
 ```java
 interface PayType {
-    double calculateExchangeFee(int pay);
+    int calculateExchangeFee(int pay);
 }
 
 class YenPayType implements PayType {
-    double exchangeRate = 10;
+    int exchangeRate = 10;
     
     @Override
-    double calculateExchangeFee(int pay) {
+    int calculateExchangeFee(int pay) {
         return pay * exchangeRate;
     }
 }
 
 class DollarPayType implements PayType {
-    double exchangeRate = 1165;
+    int exchangeRate = 1165;
         
     @Override
-    double calculateExchangeFee(int pay) {
+    int calculateExchangeFee(int pay) {
         return pay * exchangeRate;
     }
 }
