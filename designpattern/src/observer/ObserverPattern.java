@@ -18,6 +18,10 @@ public class ObserverPattern {
 
         waitingSystem.reduceWaitingTimes();
         waitingSystem.reduceWaitingTimes();
+
+        System.out.println("remove notify observer");
+        waitingSystem.removeObserver(customerNotifyObserver);
+        waitingSystem.reduceWaitingTimes();
     }
 }
 

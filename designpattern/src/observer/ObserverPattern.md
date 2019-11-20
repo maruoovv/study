@@ -128,20 +128,25 @@ public class CustomerNotifyObserver implements Observer{
 예제를 실행해보자.
 ```java
 class Example {
-    public static void main(String[] args) {
-        WaitingSystem waitingSystem = new WaitingSystem();
+   public static void main(String[] args) {
+           WaitingSystem waitingSystem = new WaitingSystem();
+   
+           ElectricBoardObserver electricBoardObserver = new ElectricBoardObserver(waitingSystem);
+           CustomerNotifyObserver customerNotifyObserver = new CustomerNotifyObserver(waitingSystem);
+   
+           Customer customer1 = new Customer("java", "12345678");
+           Customer customer2 = new Customer("scala", "00000000");
+   
+           waitingSystem.registerWaiting(customer1);
+           waitingSystem.registerWaiting(customer2);
+   
+           waitingSystem.reduceWaitingTimes();
+           waitingSystem.reduceWaitingTimes();
 
-        ElectricBoardObserver electricBoardObserver = new ElectricBoardObserver(waitingSystem);
-        CustomerNotifyObserver customerNotifyObserver = new CustomerNotifyObserver(waitingSystem);
-
-        Customer customer1 = new Customer("java", "12345678");
-        Customer customer2 = new Customer("scala", "00000000");
-
-        waitingSystem.registerWaiting(customer1);
-        waitingSystem.registerWaiting(customer2);
-
-        waitingSystem.reduceWaitingTimes();
-        waitingSystem.reduceWaitingTimes();
+            // 연락처로 메시지를 보내주는 시스템에 문제가 생겨, 일시적으로 옵저버에서 탈퇴 하였다.              
+           System.out.println("remove notify observer");
+           waitingSystem.removeObserver(customerNotifyObserver);
+           waitingSystem.reduceWaitingTimes();
     }
 }
 ```
@@ -155,6 +160,9 @@ customer name : java remainTime : PT18M
 customer name : scala remainTime : PT18M
 send to phoneNumber : 12345678 remain time : PT18M
 send to phoneNumber : 00000000 remain time : PT18M
+remove notify observer
+customer name : java remainTime : PT17M
+customer name : scala remainTime : PT17M
 ```
 
 옵저버들은 Observer 라는 인터페이스를 구현하기만 하면,  
