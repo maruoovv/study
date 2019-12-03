@@ -9,9 +9,12 @@ import java.util.concurrent.TimeUnit;
 public class CommandPattern {
 
     static Queue<Command> jobQueue = new LinkedList<>();
+    private static final Object lock = new Object();
 
-    public synchronized static Queue<Command> getQueue() {
-        return jobQueue;
+    public static Queue<Command> getQueue() {
+        synchronized (lock) {
+            return jobQueue;
+        }
     }
 
     public static void main(String[] args) throws InterruptedException {
@@ -29,7 +32,9 @@ public class CommandPattern {
             for (int i = 0; i < 10; i++) {
                 try {
                     Thread.sleep(2);
-                    getQueue().add(mailJobExecutor.getCommand());
+                    synchronized (lock) {
+                        getQueue().add(mailJobExecutor.getCommand());
+                    }
                 } catch (InterruptedException e) {
                 }
             }
@@ -38,7 +43,9 @@ public class CommandPattern {
             for (int i = 0; i < 10; i++) {
                 try {
                     Thread.sleep(2);
-                    getQueue().add(smsJobExecutor.getCommand());
+                    synchronized (lock) {
+                        getQueue().add(smsJobExecutor.getCommand());
+                    }
                 } catch (InterruptedException e) {
                 }
             }
@@ -47,7 +54,9 @@ public class CommandPattern {
             for (int i = 0; i < 10; i++) {
                 try {
                     Thread.sleep(2);
-                    getQueue().add(chatJobExecutor.getCommand());
+                    synchronized (lock) {
+                        getQueue().add(chatJobExecutor.getCommand());
+                    }
                 } catch (InterruptedException e) {
                 }
             }
