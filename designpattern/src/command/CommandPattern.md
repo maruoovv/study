@@ -111,67 +111,58 @@ public class JobExecutor {
 여러 잡 익스큐터들을 시뮬레이션 하기 위해 쓰레드를 썼다. 작업큐를 처리하는 객체를 쓰레드를 안쓴건 결과를 보기 편하게 하려고..
 ```java
 public class CommandPattern {
-    static Queue<Command> jobQueue = new LinkedList<>();
-       private static final Object lock = new Object();
-   
-       public static Queue<Command> getQueue() {
-           synchronized (lock) {
-               return jobQueue;
-           }
-       }
-   
-       public static void main(String[] args) throws InterruptedException {
-           Command mailCommand = new MailSender(new Mail());
-           Command smsCommand = new SMSSender(new SMS());
-           Command chatCommand = new ChatSender(new Chat());
-   
-           JobExecutor mailJobExecutor = new JobExecutor(mailCommand);
-           JobExecutor smsJobExecutor = new JobExecutor(smsCommand);
-           JobExecutor chatJobExecutor = new JobExecutor(chatCommand);
-   
-   
-           ExecutorService es = Executors.newFixedThreadPool(10);
-           es.execute(() -> {
-               for (int i = 0; i < 10; i++) {
-                   try {
-                       Thread.sleep(2);
-                       synchronized (lock) {
-                           getQueue().add(mailJobExecutor.getCommand());
-                       }
-                   } catch (InterruptedException e) {
-                   }
-               }
-           });
-           es.execute(() -> {
-               for (int i = 0; i < 10; i++) {
-                   try {
-                       Thread.sleep(2);
-                       synchronized (lock) {
-                           getQueue().add(smsJobExecutor.getCommand());
-                       }
-                   } catch (InterruptedException e) {
-                   }
-               }
-           });
-           es.execute(() -> {
-               for (int i = 0; i < 10; i++) {
-                   try {
-                       Thread.sleep(2);
-                       synchronized (lock) {
-                           getQueue().add(chatJobExecutor.getCommand());
-                       }
-                   } catch (InterruptedException e) {
-                   }
-               }
-           });
-   
-           es.awaitTermination(2, TimeUnit.SECONDS);
-           es.shutdown();
-   
-           while(!jobQueue.isEmpty()) {
-               Command command = jobQueue.poll();
-               command.execute();
-           }
-       }
+    private static Queue<Command> jobQueue = new ConcurrentLinkedQueue<>();
+    
+        private static Queue<Command> getQueue() {
+            return jobQueue;
+        }
+    
+        public static void main(String[] args) throws InterruptedException {
+            Command mailCommand = new MailSender(new Mail());
+            Command smsCommand = new SMSSender(new SMS());
+            Command chatCommand = new ChatSender(new Chat());
+    
+            JobExecutor mailJobExecutor = new JobExecutor(mailCommand);
+            JobExecutor smsJobExecutor = new JobExecutor(smsCommand);
+            JobExecutor chatJobExecutor = new JobExecutor(chatCommand);
+    
+    
+            ExecutorService es = Executors.newFixedThreadPool(10);
+            es.execute(() -> {
+                for (int i = 0; i < 10; i++) {
+                    try {
+                        Thread.sleep(2);
+                        getQueue().add(mailJobExecutor.getCommand());
+                    } catch (InterruptedException e) {
+                    }
+                }
+            });
+            es.execute(() -> {
+                for (int i = 0; i < 10; i++) {
+                    try {
+                        Thread.sleep(2);
+                        getQueue().add(smsJobExecutor.getCommand());
+                    } catch (InterruptedException e) {
+                    }
+                }
+            });
+            es.execute(() -> {
+                for (int i = 0; i < 10; i++) {
+                    try {
+                        Thread.sleep(2);
+                        getQueue().add(chatJobExecutor.getCommand());
+                    } catch (InterruptedException e) {
+                    }
+                }
+            });
+    
+            es.awaitTermination(2, TimeUnit.SECONDS);
+            es.shutdown();
+    
+            while(!jobQueue.isEmpty()) {
+                Command command = jobQueue.poll();
+                command.execute();
+            }
+        }
 }
 ```

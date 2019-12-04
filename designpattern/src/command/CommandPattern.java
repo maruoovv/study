@@ -1,20 +1,16 @@
 package command;
 
-import java.util.LinkedList;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class CommandPattern {
+    private static Queue<Command> jobQueue = new ConcurrentLinkedQueue<>();
 
-    static Queue<Command> jobQueue = new LinkedList<>();
-    private static final Object lock = new Object();
-
-    public static Queue<Command> getQueue() {
-        synchronized (lock) {
-            return jobQueue;
-        }
+    private static Queue<Command> getQueue() {
+        return jobQueue;
     }
 
     public static void main(String[] args) throws InterruptedException {
@@ -32,9 +28,7 @@ public class CommandPattern {
             for (int i = 0; i < 10; i++) {
                 try {
                     Thread.sleep(2);
-                    synchronized (lock) {
-                        getQueue().add(mailJobExecutor.getCommand());
-                    }
+                    getQueue().add(mailJobExecutor.getCommand());
                 } catch (InterruptedException e) {
                 }
             }
@@ -43,9 +37,7 @@ public class CommandPattern {
             for (int i = 0; i < 10; i++) {
                 try {
                     Thread.sleep(2);
-                    synchronized (lock) {
-                        getQueue().add(smsJobExecutor.getCommand());
-                    }
+                    getQueue().add(smsJobExecutor.getCommand());
                 } catch (InterruptedException e) {
                 }
             }
@@ -54,9 +46,7 @@ public class CommandPattern {
             for (int i = 0; i < 10; i++) {
                 try {
                     Thread.sleep(2);
-                    synchronized (lock) {
-                        getQueue().add(chatJobExecutor.getCommand());
-                    }
+                    getQueue().add(chatJobExecutor.getCommand());
                 } catch (InterruptedException e) {
                 }
             }
