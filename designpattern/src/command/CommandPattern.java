@@ -22,40 +22,27 @@ public class CommandPattern {
         JobExecutor smsJobExecutor = new JobExecutor(smsCommand);
         JobExecutor chatJobExecutor = new JobExecutor(chatCommand);
 
-
         ExecutorService es = Executors.newFixedThreadPool(10);
         es.execute(() -> {
             for (int i = 0; i < 10; i++) {
-                try {
-                    Thread.sleep(2);
-                    getQueue().add(mailJobExecutor.getCommand());
-                } catch (InterruptedException e) {
-                }
+                getQueue().add(mailJobExecutor.getCommand());
             }
         });
         es.execute(() -> {
             for (int i = 0; i < 10; i++) {
-                try {
-                    Thread.sleep(2);
-                    getQueue().add(smsJobExecutor.getCommand());
-                } catch (InterruptedException e) {
-                }
+                getQueue().add(smsJobExecutor.getCommand());
             }
         });
         es.execute(() -> {
             for (int i = 0; i < 10; i++) {
-                try {
-                    Thread.sleep(2);
-                    getQueue().add(chatJobExecutor.getCommand());
-                } catch (InterruptedException e) {
-                }
+                getQueue().add(chatJobExecutor.getCommand());
             }
         });
 
         es.awaitTermination(2, TimeUnit.SECONDS);
         es.shutdown();
 
-        while(!jobQueue.isEmpty()) {
+        while (!jobQueue.isEmpty()) {
             Command command = jobQueue.poll();
             command.execute();
         }
