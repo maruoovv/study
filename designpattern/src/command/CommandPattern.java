@@ -25,20 +25,31 @@ public class CommandPattern {
         ExecutorService es = Executors.newFixedThreadPool(10);
         es.execute(() -> {
             for (int i = 0; i < 10; i++) {
-                getQueue().add(mailJobExecutor.getCommand());
+                try {
+                    Thread.sleep(2);
+                    getQueue().add(mailJobExecutor.getCommand());
+                } catch (InterruptedException e) {
+                }
             }
         });
         es.execute(() -> {
             for (int i = 0; i < 10; i++) {
-                getQueue().add(smsJobExecutor.getCommand());
+                try {
+                    Thread.sleep(2);
+                    getQueue().add(smsJobExecutor.getCommand());
+                } catch (InterruptedException e) {
+                }
             }
         });
         es.execute(() -> {
             for (int i = 0; i < 10; i++) {
-                getQueue().add(chatJobExecutor.getCommand());
+                try {
+                    Thread.sleep(2);
+                    getQueue().add(chatJobExecutor.getCommand());
+                } catch (InterruptedException e) {
+                }
             }
         });
-
         es.awaitTermination(2, TimeUnit.SECONDS);
         es.shutdown();
 
