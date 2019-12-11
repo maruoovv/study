@@ -9,7 +9,7 @@ public class DB2Repository extends AbstractRepository {
 
     public DB2Repository() throws SQLException {
         try {
-            connection = DriverManager.getConnection("jdbc:oracle:thin:@localhost:1523:db2", "user", "user");
+            connection = DriverManager.getConnection("jdbc:oracle:thin:@localhost:1521:db2", "user", "user");
             connection.setAutoCommit(false);
         } catch (SQLException e) {
             throw e;
