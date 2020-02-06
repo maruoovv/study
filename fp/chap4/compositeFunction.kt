@@ -2,7 +2,7 @@ package chap4.compositeFunction
 
 import java.lang.IllegalArgumentException
 
-// 4.15 숫자의 리스트를 받아서 최댓값의 제곱을 구하는 함수를 합성함수로 작성하라
+// 4.5 숫자의 리스트를 받아서 최댓값의 제곱을 구하는 함수를 합성함수로 작성하라
 
 fun maxPower(list : List<Int>) : Int = power(max(list))
 

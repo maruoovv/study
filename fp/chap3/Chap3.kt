@@ -1,4 +1,4 @@
-
+package chap3
 // 3.2 X의 N승을 구하는 함수를 재귀로 구현
 fun power(x : Double, n : Int) : Double {
     return when (n) {
@@ -46,16 +46,16 @@ fun elem(num : Int, list: List<Int>) : Boolean {
     }
 }
 
-// 3.9 최대공약수를 구하는 gcd 함수를 작성하라.
+// 3.9 최대공약수를 구하는 chap3.gcd 함수를 작성하라.
 
 fun gcd(m : Int, n : Int) : Int {
     return when (n) {
         0 -> m
-        else -> gcd(n, m%n)
+        else -> gcd(n, m % n)
     }
 }
 
-// 3.12 factorial + tailrec + memoization
+// 3.12 chap3.factorial + tailrec + memoization
 
 fun factorialFP(n : Int) : Int {
     return factorialFP(n, 1)
@@ -68,7 +68,7 @@ tailrec fun factorialFP(n : Int, sum : Int) : Int {
     }
 }
 
-// 3.13 power + tailrec + memoization
+// 3.13 chap3.power + tailrec + memoization
 
 fun powerFP(x : Double, n : Int) : Double {
     return powerFP(x, n, 1.0)
