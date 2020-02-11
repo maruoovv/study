@@ -64,6 +64,29 @@ tailrec fun <T> FunList<T>.dropWhile(p : (T) -> Boolean) : FunList<T> = when(thi
     }
 }
 
+// 5.6 리스트의 앞에서부터 N개의 값을 가진 리스트를 반환하는 take 함수를 구현하라.
+// 원본 리스트는 바뀌지 않아야 하고, 새로운 리스트를 반환할 때마다 리스트를 생성하면 안 된다.
+tailrec fun <T> FunList<T>.take(n : Int, acc : FunList<T> = Nil) : FunList<T> = when(n) {
+    0 -> acc.reverse()
+    else -> {
+        this.getTail().take(n - 1, acc.addHead(this.getHead()))
+    }
+}
+
+// 5.7 T를 입력받아 Boolean 을 반환하는 함수 p를 받는다. 리스트의 앞에서부터 함수 p 를 만족하는 값들의 리스트를 반환하라.
+// 모든값이 만족하지 않으면 원본을 반환.
+// 원본 리스트는 바뀌지 않아야 하고, 새로운 리스트를 반환할 때마다 리스트를 생성하면 안 된다.
+
+tailrec fun <T> FunList<T>.takeWhile(acc : FunList<T> = Nil, p : (T) -> Boolean) : FunList<T> = when(this) {
+    Nil -> if (acc == Nil) this else acc.reverse()
+    is Cons -> {
+        if (p(this.getHead())) {
+            this.getTail().takeWhile(acc.addHead(this.getHead()), p)
+        } else {
+            this.getTail().takeWhile(acc, p)
+        }
+    }
+}
 
 fun main() {
     val intList = Cons(1, Cons(2, Cons(3, Cons(4, Cons(5, Nil)))))
@@ -80,5 +103,8 @@ fun main() {
 
     println(intList.dropWhile { it > 2 })
 
+    println(intList.take(3))
 
+    println(intList.takeWhile { it > 3 })
+    println(intList.takeWhile { it > 5 })
 }
