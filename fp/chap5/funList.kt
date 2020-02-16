@@ -44,6 +44,23 @@ tailrec fun <T> FunList<T>.filter(acc : FunList<T> = Nil, p: (T) -> Boolean) : F
     }
 }
 
+tailrec fun <T, R> FunList<T>.map(acc : FunList<R> = Nil, f : (T) -> R) : FunList<R> = when(this) {
+    Nil -> acc.reverse()
+    is Cons -> tail.map(acc.addHead(f(head)), f)
+}
+
+fun <T> funListOf (vararg elements : T) : FunList<T> = elements.toFunList()
+
+private fun <T> Array<out T>.toFunList(): FunList<T> = when {
+    this.isEmpty() -> Nil
+    else -> Cons(this[0], this.copyOfRange(1, this.size).toFunList())
+}
+
+tailrec fun <T, R> FunList<T>.foldLeft(acc: R, f : (R, T) -> R) : R = when (this) {
+    Nil -> acc
+    is Cons -> tail.foldLeft(f(acc, head), f)
+}
+
 // 5.4 앞의 값이 N개 제외된 리스트를 반환하는 함수를 구현하라.
 // 원본 리스트는 바뀌지 않고, 새로운 리스트를 반환할 때마다 새로운 리스트를 생성하면 안된다.
 
@@ -88,23 +105,31 @@ tailrec fun <T> FunList<T>.takeWhile(acc : FunList<T> = Nil, p : (T) -> Boolean)
     }
 }
 
+// 5.8 map 함수에서 고차 함수가 값들의 순서값도 같이 받아 올 수 있는 indexedMap 을 작성하라.
+
+tailrec fun <T, R> FunList<T>.indexedMap(index : Int = 0, acc : FunList<R> = Nil, f : (Int, T) -> R) : FunList<R> = when(this) {
+    Nil -> acc.reverse()
+    is Cons -> tail.indexedMap(index + 1, acc.addHead(f(index, head)), f)
+}
+
 fun main() {
     val intList = Cons(1, Cons(2, Cons(3, Cons(4, Cons(5, Nil)))))
     val doubleList = Cons(1.0, Cons(2.0, Cons(3.0, Cons(4.0, Cons(5.0, Nil)))))
 
-    println(intList.getHead())
-    println(intList.getTail())
+    require(intList.getHead() == 1)
+    require(intList.getTail() == funListOf(2,3,4,5))
 
-    println(doubleList.getHead())
-    println(doubleList.getTail())
+    require(doubleList.getHead() == 1.0)
+    require(doubleList.getTail() == funListOf(2.0, 3.0, 4.0, 5.0))
 
-    println(intList.drop(2))
-    println(intList)
+    require(intList.drop(2) == funListOf(3,4,5))
 
-    println(intList.dropWhile { it > 2 })
+    require(intList.dropWhile { it > 2 } == funListOf(3,4,5))
 
-    println(intList.take(3))
+    require(intList.take(3) == funListOf(1,2,3))
 
-    println(intList.takeWhile { it > 3 })
-    println(intList.takeWhile { it > 5 })
+    require(intList.takeWhile { it > 3 } == funListOf(4, 5))
+    require(intList.takeWhile { it > 5 } == Nil)
+
+    require(intList.indexedMap{index, elem -> elem + index} == funListOf(1,3,5,7,9))
 }
