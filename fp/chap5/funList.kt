@@ -112,6 +112,16 @@ tailrec fun <T, R> FunList<T>.indexedMap(index : Int = 0, acc : FunList<R> = Nil
     is Cons -> tail.indexedMap(index + 1, acc.addHead(f(index, head)), f)
 }
 
+// 3장에서 작성한 maximum 함수를 foldLeft 함수를 사용해서 다시 작성해보자
+fun FunList<Int>.maximumByFoldLeft() : Int = this.foldLeft(0) {
+    acc, elem -> if (acc > elem) acc else elem
+}
+
+// filter 함수를 foldLeft 함수를 사용해서 다시 작성해 보자
+fun <T> FunList<T>.filterByFoldLeft(p : (T) -> Boolean) : FunList<T> = foldLeft(Nil) {
+    acc : FunList<T>, elem -> if(p(elem)) acc.appendTail(elem) else acc
+}
+
 fun main() {
     val intList = Cons(1, Cons(2, Cons(3, Cons(4, Cons(5, Nil)))))
     val doubleList = Cons(1.0, Cons(2.0, Cons(3.0, Cons(4.0, Cons(5.0, Nil)))))
@@ -132,4 +142,8 @@ fun main() {
     require(intList.takeWhile { it > 5 } == Nil)
 
     require(intList.indexedMap{index, elem -> elem + index} == funListOf(1,3,5,7,9))
+
+    require(intList.maximumByFoldLeft() == 5)
+
+    require(intList.filterByFoldLeft { it > 3 } == funListOf(4, 5))
 }
