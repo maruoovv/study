@@ -112,14 +112,29 @@ tailrec fun <T, R> FunList<T>.indexedMap(index : Int = 0, acc : FunList<R> = Nil
     is Cons -> tail.indexedMap(index + 1, acc.addHead(f(index, head)), f)
 }
 
-// 3장에서 작성한 maximum 함수를 foldLeft 함수를 사용해서 다시 작성해보자
+// 5.9 3장에서 작성한 maximum 함수를 foldLeft 함수를 사용해서 다시 작성해보자
 fun FunList<Int>.maximumByFoldLeft() : Int = this.foldLeft(0) {
     acc, elem -> if (acc > elem) acc else elem
 }
 
-// filter 함수를 foldLeft 함수를 사용해서 다시 작성해 보자
+// 5.10 filter 함수를 foldLeft 함수를 사용해서 다시 작성해 보자
 fun <T> FunList<T>.filterByFoldLeft(p : (T) -> Boolean) : FunList<T> = foldLeft(Nil) {
     acc : FunList<T>, elem -> if(p(elem)) acc.appendTail(elem) else acc
+}
+
+fun <T, R> FunList<T>.foldRight(acc : R, f : (T, R) -> R) : R = when(this) {
+    Nil -> acc
+    is Cons -> f(head, tail.foldRight(acc, f))
+}
+
+// 5.11 3장에서 작성한 reverse 함수를 foldRight 함수를 사용해 작성하라
+fun <T> FunList<T>.reverseByFoldRight() : FunList<T> = foldRight(Nil as FunList<T>) {
+   x, acc -> acc.appendTail(x)
+}
+
+// 5.12 filter 함수를 foldRight 를 사용하여 다시 작성하라.
+fun <T> FunList<T>.filterByFoldRight(p : (T) -> Boolean): FunList<T> = foldRight(Nil as FunList<T>) {
+    x, acc -> if (p(x)) acc.appendTail(x) else acc
 }
 
 fun main() {
@@ -146,4 +161,8 @@ fun main() {
     require(intList.maximumByFoldLeft() == 5)
 
     require(intList.filterByFoldLeft { it > 3 } == funListOf(4, 5))
+
+    require(intList.reverseByFoldRight() == funListOf(5,4,3,2,1))
+
+    require(intList.filterByFoldRight { it > 3 } == funListOf(5, 4))
 }
