@@ -137,6 +137,16 @@ fun <T> FunList<T>.filterByFoldRight(p : (T) -> Boolean): FunList<T> = foldRight
     x, acc -> if (p(x)) acc.appendTail(x) else acc
 }
 
+// 5.13 FunList에 zip 함수를 작성하라.
+tailrec fun <T, R> FunList<T>.zip(other : FunList<R>, acc : FunList<Pair <T, R>> = Nil) : FunList<Pair<T, R>> {
+    return when {
+        this === Nil || other === Nil -> acc.reverse()
+        else -> {
+            getTail().zip(other.getTail(), acc.addHead(getHead() to other.getHead()))
+        }
+    }
+}
+
 fun main() {
     val intList = Cons(1, Cons(2, Cons(3, Cons(4, Cons(5, Nil)))))
     val doubleList = Cons(1.0, Cons(2.0, Cons(3.0, Cons(4.0, Cons(5.0, Nil)))))
@@ -165,4 +175,6 @@ fun main() {
     require(intList.reverseByFoldRight() == funListOf(5,4,3,2,1))
 
     require(intList.filterByFoldRight { it > 3 } == funListOf(5, 4))
+
+    require(intList.zip(funListOf(5,4)) == funListOf(1 to 5, 2 to 4))
 }
