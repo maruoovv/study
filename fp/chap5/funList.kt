@@ -147,6 +147,16 @@ tailrec fun <T, R> FunList<T>.zip(other : FunList<R>, acc : FunList<Pair <T, R>>
     }
 }
 
+// 5.14 리스트의 값을 입력받은 조합 함수에 의해 연관 자료구조인 맵을 생성하는 함수를 작성하라.
+fun <T, R> FunList<T>.associate(f : (T) -> Pair<T, R>) : Map<T, R> = foldLeft(mapOf()) {
+    acc, value -> acc + f(value)
+}
+
+// 5.15 FunList의 값들을 입력받은 키 생성 함수를 기준으로 맵을 생성하는 groupBy 함수를 작성하라.
+fun <T, K> FunList<T>.groupBy(f : (T) -> K) : Map<K, FunList<T>> = foldLeft(mapOf()) {
+    acc, value -> acc + (f(value) to acc.getOrElse(f(value)) {funListOf()}.appendTail(value))
+}
+
 fun main() {
     val intList = Cons(1, Cons(2, Cons(3, Cons(4, Cons(5, Nil)))))
     val doubleList = Cons(1.0, Cons(2.0, Cons(3.0, Cons(4.0, Cons(5.0, Nil)))))
@@ -177,4 +187,9 @@ fun main() {
     require(intList.filterByFoldRight { it > 3 } == funListOf(5, 4))
 
     require(intList.zip(funListOf(5,4)) == funListOf(1 to 5, 2 to 4))
+
+    require(funListOf(1,2,3).associate { it to it + 10 } == mapOf(1 to 11, 2 to 12, 3 to 13))
+
+    require(funListOf(1,2,3,4).groupBy { it % 2 == 0 } == mapOf(true to funListOf(2,4), false to funListOf(1, 3)))
+
 }
