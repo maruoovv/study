@@ -147,8 +147,49 @@ public void delete() {
 ```
 
 ### 양방향 연관관계
+양방향 연관관계를 알아보자.  
+양방향 연관관계는 단방향 연관관계를 양쪽에 2개를 만드는 것과 같다.
+
+```java
+@Entity
+public class Member {
+	@Id
+	@Column(name = "MEMBER_ID")
+	private String id;
+	private String name;
+	
+	// 연관관계 맵핑
+	@ManyToOne
+	@JoinColumn(name = "TEAM_ID")
+	private Team team; // 팀의 참조
+	
+	public void setTeam(Team team) {
+		this.team = team;
+	} 
+}
+
+@Entity
+public class Team {
+	@Id 
+	@Column(name = "TEAM_ID")
+	private String id;
+	private String name;
+	
+	@OneToMany
+	@JoinColumn(mappedBy = "team")
+	private List<Member> members = new ArrayList<Member>();
+}
+```
+
+팀과 회원은 일대다 관계이므로, 팀에는 회원의 참조를 OneToMany 로 설정했다.  
+mappedBy 속성은 양방향 맵핑일 때, 반대쪽 맵핑의 필드 이름을 값으로 준다.
 
 ### 연관관계의 주인
+객체간의 관계에선 엄밀히 말해 양방향 연관관계 라는 것이 없다.  
+서로 다른 단방향 연관관계 2개를 양방향인 것처럼 보이게 했을 뿐이다.  
+테이블은 외래 키 하나로 양방향 연관관계 관리가 가능하지만,  
+객체는 단방향 참조가 2개 발생하게 되는데, 둘 중 어떤 관계를 사용하여 외래 키 관리를 해야할까?  
+이러한 객체와 테이블 간의 차이로 인해 JPA는 두 연관관계 중 하나를 정하여  외래키를 관리해야 하는데 이것을 **연관관계의 주인** 이라 한다. 
 
 ### 양방향 연관관계 저장 
 
