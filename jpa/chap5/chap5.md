@@ -189,8 +189,65 @@ mappedBy 속성은 양방향 맵핑일 때, 반대쪽 맵핑의 필드 이름을
 서로 다른 단방향 연관관계 2개를 양방향인 것처럼 보이게 했을 뿐이다.  
 테이블은 외래 키 하나로 양방향 연관관계 관리가 가능하지만,  
 객체는 단방향 참조가 2개 발생하게 되는데, 둘 중 어떤 관계를 사용하여 외래 키 관리를 해야할까?  
-이러한 객체와 테이블 간의 차이로 인해 JPA는 두 연관관계 중 하나를 정하여  외래키를 관리해야 하는데 이것을 **연관관계의 주인** 이라 한다. 
+이러한 객체와 테이블 간의 차이로 인해 JPA는 두 연관관계 중 하나를 정하여 외래키를 관리해야 하는데 이것을 **연관관계의 주인** 이라 한다.
+
+연관관계의 주인만이 데이터베이스 연관관계와 맵핑되고, 외래키를 관리 할 수 있다.  
+주인이 아닌 쪽은 읽기만 할 수 있다.
+
+- 연관관계의 주인이 아닌 쪽이 mappedBy 속성을 사용해 속성의 값으로 주인을 지정한다.
+- 연관관계의 주인은 테이블에 외래 키가 있는 곳으로 해야 한다.
+
 
 ### 양방향 연관관계 저장 
+```JAVA
+public void save() {
+    // 팀1 저장
+    Team team1 = new Team("team1", "팀1");
+    em.persist(team1);
+    
+    // 회원1 저장
+    Member member1 = new Member("member1", "회원1");
+    member1.setTeam(team1); // 연관관계 설정 member1 -> team1
+    em.persist(member1);
+    
+    // 회원2 저장
+    Member member2 = new Member("member2", "회원2");
+    member2.setTeam(team1); // 연관관계 설정 member2 -> team1
+    em.persist(member2);
+}
+```
+양방향 연관관계는 연관관계의 주인이 외래키를 관리한다.   
+따라서 주인이 아닌 쪽의 방향에 다음과 같이 설정하지 않아도 데이터베이스에 반영된다.
+
+```java
+team1.getMembers().add(member1); // 연관관계의 주인이 아니므로 무시
+``` 
+연관관계의 주인이 아닌 쪽에 이런식으로만 설정하면, 데이터베이스에 정상 반영되지 않는다.
 
 ### 양방향 연관관계 주의점 
+하지만 객체의 입장에서 보면 양쪽 방향에 모두 값을 입력해주는 것이 안전하다.
+
+```JAVA
+public void save() {
+    // 팀1 저장
+    Team team1 = new Team("team1", "팀1");
+    em.persist(team1);
+    
+    // 회원1 저장
+    Member member1 = new Member("member1", "회원1");
+    member1.setTeam(team1); // 연관관계 설정 member1 -> team1
+    team1.getMembers().add(member1); // 연관관계 설정 team1 -> member1
+    em.persist(member1);
+    
+    // 회원2 저장
+    Member member2 = new Member("member2", "회원2");
+    member2.setTeam(team1); // 연관관계 설정 member2 -> team1
+    team1.getMembers().add(member2); // 연관관계 설정 team1 -> member2
+    em.persist(member2);
+}
+```
+
+___
+**연관관계의 주인은 비즈니스 로직 상 중요도에 따라 정하는 것이 아닌,
+단순하게 테이블의 외래 키의 위치에 따라 결정해야 한다.**
+
