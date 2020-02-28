@@ -262,3 +262,281 @@ CHILD 테이블은 PARENT 테이블의 기본 키를 받아 기본키 + 외래�
 
 - 필수적 비식별 관계(Mandatory) : 외래 키에 NULL을 허용하지 않는다. 연관관계를 필수로 맺어야 한다.
 - 선택적 비식별 관계(Optional) : 외래 키에 NULL을 허용한다. 연관관계를 맺을지 말지 선택할 수 있다.
+
+#### 복합 키 : 비식별 관계 맵핑
+
+둘 이상의 컬럼으로 구성된 복합 키를 사용하려면 별도의 식별자 클래스를 만들어야 한다.  
+JPA는 @IdClass, @EmbeddedId 2가지 방법을 제공한다.
+
+**IdClass** 
+
+![image](https://user-images.githubusercontent.com/37106689/75543877-24df4f00-5a66-11ea-8a4c-d69375eecf20.png)
+
+parent - child 는 비식별 관계고 parent 는 복합 키를 사용한다.  
+child 는 parent 의 pk 를 사용한다.
+
+```java
+@Entity 
+@IdClass(ParentId.class)
+// 식별자 클래스를 지정
+public class Parent {
+    @Id
+    @Column(name = "PARENT_ID1")
+    private String id1;
+    
+    @Id 
+    @Column(name = "PARENT_ID2")
+    private String id2;
+}
+
+public class ParentId implements Serializable {
+    private String id1;
+    private String id2;
+    
+    public ParentId() {
+        
+    }
+    
+    public ParentId(String id1, String id2) {
+        this.id1 = id1;
+        this.id2 = id2;
+    }
+    
+    @Override
+    public boolean equals(Object o) {
+        //...
+    }
+    
+    @Override
+    public int hashCode() {
+        // ...
+    }
+}
+```
+
+@IdClass 를 사용할 때 식별자 클래스는 다음 조건을 만족해야 한다.
+- 식별자 클래스의 속성명과 엔티티에서 사용하는 식별자의 속성명이 같아야 한다.
+    - 예제의 Parent.id1, Parent.id2 <-> ParentId.id1, ParentId.id2
+- Serializable 을 구현해야 한다.
+- equals, hashCode 를 구현해야 한다.
+- 기본 생성자가 있어야 한다
+- 식별자 클래스는 public 이어야 한다.
+
+```java
+public void test {
+    Parent parent = new Parent();
+    parent.setId1("id1");
+    parent.setId2("id2");
+    em.persist(parent);
+    // 저장
+    
+    // 조회
+    ParentId parentId = new ParentId("id1", "id2");
+    Parent parent = em.find(Parent.class, parentId);
+}
+```
+
+저장 코드를 보면 식별자 클래스를 지정하지 않는데, em.persist 호출 시 영속성 컨텍스트에 엔티티를 등록하기 직전에 식별자 클래스를 생성하고 키로 사용한다.
+이제 자식 클래스를 추가해보자
+
+```java
+@Entity 
+public class Child {
+    @Id
+    private String id;
+    
+    @ManyToOne
+    @JoinColumns({
+            @JoinColumn(name = "PARENT_ID1", referencedColumnName = "PARENT_ID1"),
+            @JoinColumn(name = "PARENT_ID2", referencedColumnName = "PARENT_ID2")
+    })
+    private Parent parent;
+}
+```
+
+부모 테이블의 기본 키가 복합 키이므로 자식 테이블의 외래 키도 복합 키다.  
+따라서 외래 키 맵핑시 여러 컬럼을 맵핑해야 하므로 @JoinColumns 를 사용하여 각각 외래 키 컬럼을 맵핑한다.
+
+**@EmbeddedId**
+
+@IdClass 가 데이터베이스에 맞춘 방법이라면 @EmbeddedId 는 좀더 객체지향적인 방법이다.
+
+```java
+@Entity 
+public class Parent {
+    @EmbeddedId 
+    private ParentId id;
+}
+
+@Embeddable
+public class ParentId implements Serializable {
+    @Column(name = "PARENT_ID1")
+    private String id1;
+    @Column(name = "PARENT_ID2")
+    private String id2;
+    
+    // equals and hashcode..
+}
+```
+
+@EmbeddedId 를 적용한 식별자 클래스는 다음 조건을 만족해야 한다.
+- @Embeddable 어노테이션 추가
+- Serializable 구현
+- equals, hashcode 구현
+- 기본 생성자가 있어야 한다.
+- 식별자 클래스는 public 이어야 한다.
+
+```java
+public void test() {
+    Parent parent = new Parent();
+    ParentId parentId = new ParentId("id1", "id2");
+    parent.setId(parentId);
+    em.persist(parent);
+    // 저장
+    
+    // 조회
+    ParentId parentId = new ParentId("id1", "id2");
+    Parent parent = em.find(Parent.class, parentId);
+} 
+```
+
+** equals, hashcode 를 구현해야 하는 이유 **
+
+영속성 컨텍스트는 엔티티의 식별자를 키로 사용하여 엔티티를 관리한다.  
+그리고 식별자를 비교할 때 equals, hashcode 를 사용한다. 따라서 식별자 객체의 동등성(equals)이 지켜지지 않으면 
+예상과 다른 엔티티가 조회되는 등 심각한 문제가 발생한다.
+
+
+#### 복합 키 : 식별 관계 맵핑
+
+![image](https://user-images.githubusercontent.com/37106689/75546795-c1a4eb00-5a6c-11ea-9006-9579731df35e.png)
+
+부모-자식-손자 까지 기본키를 전달하는 식별 관계이다.  
+식별 관게에서 자식 테이블은 부모 테이블의 기본 키를 포함해서 복합 키를 구성해야 한다.
+
+**@IdClass**
+
+```java
+@Entity 
+public class Parent {
+    @Id @Column(name = "PARENT_ID")
+    private String id;
+    private String name;
+}
+
+@Entity 
+@IdClass(ChildId.class)
+public class Child {
+    @Id
+    @ManoToOne 
+    @JoinColumn(name = "PARENT_ID")
+    public Parent parent;
+    
+    @Id @Column(name = "CHILD_ID")
+    private String childId;
+    
+    private String name;
+}
+
+@Embeddable
+public class ChildId implements Serializable {
+    private String parent;
+    private String childId;
+    // equals, hashcode..
+}
+
+@Entity 
+@IdClass(GrandChildId.class)
+public class GrandChild {
+    @Id 
+    @ManyToOne
+    @JoinColumns({
+            @JoinColumn(name = "PARENT_ID"),
+            @JoinColumn(name = "CHILD_ID")
+    })
+    private Child child;
+    
+    @Id @Column(name = "GRANDCHILD_ID")
+    private String id;
+    
+    private String name;
+}
+
+public class GrandChildId implements Serializable {
+    private ChildId child;
+    private String id;
+    
+    // equals, hashcode..
+}
+
+@Embeddable
+public class GrandChildId implements Serializable {
+    private ChildId childId; // GrandChild.child
+    private String id; // GrandChild.id
+    // equals, hashcode..
+}
+```
+
+식별 관계는 기본 키와 외래 키를 같이 맵핑해야 한다.  
+식별자 맵핑인 @Id 와 연관관계 맵핑인 @ManyToOne 을 같이 사용했다.
+
+**@EmbeddedId**
+@EmbeddedId 로 식별 관계를 구성할 때는 @MapsId 를 사용해야 한다.
+
+```java
+@Entity 
+public class Parent {
+    @Id @Column(name = "PARENT_ID")
+    private String id;
+    private String name;
+}
+
+@Entity 
+public class Child {
+    @EmbeddedId
+    private ChildId id;
+    
+    @MapsId("parentId") // ChildId.parentId 맵핑
+    @ManyToOne
+    @JoinColumn(name = "PARENT_ID")
+    public Parent parent;
+    
+    private String name;
+}
+
+@Embeddable
+public class ChildId implements Serializable {
+    private String parentId; // @MapsId("parentId") 로 맵핑 
+    
+    @Column(name = "CHILD_ID")
+    private String id;
+    
+    // equals, hashcode..
+}
+
+@Entity 
+public class GrandChild {
+    @EmbeddedId
+    private GrandChildId id;
+    
+    @MapsId("childId") // GrandChildId.childId 맵핑
+    @ManyToOne
+    @JoinColumns({
+            @JoinColumn(name = "PARENT_ID"),
+            @JoinColumn(name = "CHILD_ID")
+    })
+    private Child child;
+    
+    private String name;
+}
+
+@Embedable
+public class GrandChildId implements Serializable {
+    private ChildId childId; // @MapsId("childId") 맵핑
+    
+    @Column(name = "GRANDCHILD_ID")
+    private String id;
+    
+    // equals, hashcode..
+}
+```
