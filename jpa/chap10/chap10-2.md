@@ -188,3 +188,143 @@ HAVING AVG(m.age) > 10
 
 ##### 정렬
 ORDER BY 는 결과를 정렬할 때 사용한다.
+
+#### JPQL 조인
+JPQL 도 조인을 지원하는데 SQL 조인과 기능은 같고 문법만 약간 다르다.
+
+##### 내부 조인
+내부조인은 INNER JOIN 을 사용한다. INNER 는 생략할 수 있다.
+
+```java
+String teamName = "teamA";
+String query = "SELECT m FROM Member m INNER JOIN m.team t WHERE t.name = :teamName";
+
+List<Member> members = em.createQuery(query, Member.class)
+                        .setParameter("teamName", teamName)
+                        .getResultList();
+```
+
+JPQL 조인의 특징은 연관 필드를 사용한다는 것이다.  
+위 예제에서 Member 가 가지고 있는 필드인 team 을 이용해 조인을 했다.  
+만약 다음과 같이 한다면 에러가 난다.
+```
+FROM Member m JOIN Team t
+```
+
+##### 외부 조인
+JPQL 의 외부 조인은 다음과 같이 사용한다.
+```SQL
+SELECT m
+FROM Member m LEFT [OUTER] JOIN m.team t
+```
+OUTER 는 생략 가능하다.
+
+##### 컬렉션 조인 
+일대다 관계나 다대다 관계처럼 컬렉션을 사용하는 곳이 조인하는 것을 컬렉션 조인이라 한다.
+
+```SQL
+SELECT t, m FROM Team t LEFT JOIN t.members m
+```
+
+##### 세타 조인 
+WHERE 절을 사용해서 세타 조인을 할수 있다. 세타 조인은 내부 조인만 지원한다.  
+세타 조인을 이용하면 관계 없는 엔티티도 조인할 수 있다.
+
+```SQL
+SELECT count(m) from Member m, Team t
+WHERE m.username = t.name
+```
+
+#### 페치 조인 
+페치 조인은 SQL 의 조인의 종류는 아니고 JPQL 에서 성능 최적화를 위해 제공하는 기능이다.  
+연관된 엔티티나 컬렉션을 한 번에 같이 조회하는 기능인데 join fetch 명령어로 사용할 수 있다.
+
+##### 엔티티 페치 조인 
+페치 조인을 사용해서 회원 엔티티를 조회하면서 연관된 팀 엔티티도 함께 조회할 수 있다.  
+```SQL
+SELECT m FROM Member m join fetch m.team
+```
+join fetch 를 사용하면, 연관된 엔티티나 컬렉션을 함께 조회한다.  
+위 에에서는 회원과 팀을 함께 조회하는데 일반적인 JPQL 조인과 다르게 team 에 별칭이 없다.  
+페치 조인은 별칭을 사용할 수 없다.
+
+실제로 실행되는 SQL 은 다음과 같다. 
+```SQL
+SELECT 
+    M.*, T.*
+FROM MEMBER M 
+INNER JOIN TEAM T 
+ON M.team_id = T.id
+```
+
+엔티티 페치 조인 JPQL 에서는 SELECT m 으로 회원만 조회했는데 실행된 SQL 은 회원과 팀을 함께 조회하고 있다.  
+회원-팀을 지연 로딩으로 설정했다고 해도, 페치 조인은 회원과 팀을 함께 조회하므로 팀 엔티티는 프록시 객체가 아닌 실제 엔티티 이다.  
+따라서 지연 로딩이 일어나지 않는다. 
+
+
+##### 컬렉션 페치 조인 
+일대다 관계인 컬렉션을 페치 조인해보자.  
+```SQL
+SELECT t 
+FROM Team join fetch t.members
+WHERE t.name = 'teamA'
+```
+
+팀을 조회하면서 페치 조인을 사용해 연관된 회원 컬렉션을 함께 조회한다.  
+팀A => 멤버1,2 란 관계가 있을 때, 위의 쿼리를 실행하면 Team 이 주 엔티티이기 때문에
+팀A 가 두개 조회된다. (왜지?)  
+
+
+##### 페치 조인과 DISTINCT
+JPQL 의 DISTINCT 는 SQL 에 DISTINCT 를 추가하는 것에 더해 애플리케이션 단에서 한 번 더 중복을 제거한다.  
+직전의 예제는 팀A가 중복으로 조회된다. DISTINCT 를 추가하면
+```SQL
+SELECT DISTINCT t
+FROM Team t JOIN FETCH t.members
+WHERE t.name = 'teamA'
+```
+
+SQL 에 추가된 DELETE 는 행이 다르므로 SQL DISTINCT 는 효과가 없다
+
+|row|팀|회원|
+|---|---|---|
+|1|teamA|member1|
+|2|teamA|member2|
+
+다음으로 애플리케이션에서 distinct 로 중복 데이터를 걸러낸다.  
+select distinct t 의 의미는 팀 에니팉의 중복을 제거하는 것이다. 따라서 중복된 팀A는 하나만 조회되게 된다.  
+
+##### 페치 조인과 일반 조인의 차이
+JPQL 
+```SQL
+SELECT t
+FROM Team t join t.members m
+WHERE t.name = 'teamA'
+```
+
+SQL
+```SQL
+SELECT 
+    T.*
+FROM TEAM t
+INNER JOIN MEMBER m ON t.id = m.team_id
+WHERE t.name = 'teamA'
+```
+
+위 예제처럼 JPQL 에서 일반 조인을 사용했을 때에는 회원 컬렉션이 함께 조회가 되지 않는다.  
+JPQL 은 결과를 반환할 때 연관관계를 고려하지 않고 단지 SELECT 절에 지정한 엔티티만 조회한다.  
+따라서 팀 엔티티만 조회하고 연관된 회원 엔티티는 조회하지 않는다.
+
+##### 페치 조인의 특징과 한계
+페치 조인을 사용하면 SQL 한번으로 연관된 엔티티들을 함께 조회할 수 있어서 SQL 호출 횟수를 줄일 수 있다.  
+엔티티에 적용하는 로딩 전략은 글로벌 로딩 전략이라 부르는데 페치 조인은 글로벌 로딩 전략보다 우선순위가 높다.  
+예를 들어 엔티티에 지연 로딩을 설정해도 JPQL 에서 페치 조인을 사용하면 페치 조인이 적용되어 연관 엔티티를 함께 조회한다.  
+
+페치 조인은 다음과 같은 한계가 있다.
+- 페치 조인 대상에는 별칭을 줄 수 없다.
+- 둘 이상의 컬렉션을 페치할 수 없다.
+- 컬렉션을 페치 조인하면 페이징API를 사용할 수 없다.
+
+
+#### 서브쿼리 
+JPQL 의 서브쿼리는 WHERE, HAVING 절에서만 사용할 수 있고, SELECT, FROM 절에서는 사용할 수 없다.  
