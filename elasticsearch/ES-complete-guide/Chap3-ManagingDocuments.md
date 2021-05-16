@@ -231,6 +231,7 @@ ES 는 이를 위해 Primary terms, Sequence number 를 사용한다.
 - replication 그룹 내에 primary shard 가 바뀌었을때, 어느게 최신인지 판단하는 방법
 - primary shard 가 몇번 바뀌엇는지 기억하는 counter
 - 모든 rep group 의 primary terms 는 클러스터에 저장
+- write operation 시 현재 primary terms 가 덧붙여진다.  
 
 #### Sequence number
 - write operation 에 primary term 과 함께 덧붙여진다.  
@@ -248,4 +249,79 @@ primary terms, sequence number 를 이용해 이미 수행된 요청이 무엇�
 #### Global and Local checkpoints
 - TODO : 이 부분은 잘 이해가 안됨.
 - sequence number 와 유사하다.
-- Rep group 은 global checkpoint, Replica shard 는 local checkpoint 이다.
+- Rep group 은 global checkpoint, Replica shards 는 local checkpoint 를 갖고있다.
+
+### Understanding document versioning
+
+- Document 의 revision history 는 아님.
+- _version
+  - integer value 이고, document 를 수정할때 1씩 증가한다.
+  - 만약 doc 을 삭제한다면, 60초 후에 버젼은 리셋된다. (index.gc_deletes 로 설정)
+- default versioning 은 internal 버저닝이라 불림
+- external versioning 도 존재
+  - ES 외부에서 관리할때 좋음
+
+### Updating documents
+
+- 여러 문서를 한번에 변경할수 있을까? 
+- _update_by_query 로 script 를 이용해 할수 있다.
+
+```
+POST /{idx}/_update_by_query
+{
+  "script": { // 스크립트 부분, 실제 수행될 내용
+    "source" : "ctx._source.in_stock--"
+  },
+  "query": { // 대상이 될 문서. 여기선 전체 문서
+    "match_all" : {}
+  }
+} 
+```
+
+### Delete by query
+
+- update 와 비슷하다. 
+
+```
+POST /{idx}/_delete_by_query
+{
+  "query": { // 대상이 될 문서. 여기선 전체 문서
+    "match_all" : {}
+  }
+} 
+```
+
+### Batch Processing
+
+- 많은 document 에 대해 여러 조작을 single query 로 어떻게 조작할까?  
+  - bulk api 사용한다.
+  - NDJSON 이라는 포맷을 사용해 여러 요청을 묶어서 보낼수 있다. 
+    - 각 행은 newline 으로 구분되어야 하고(**마지막 행도!!**), json 형태이다.
+  - action 과 metadata 로 구성된다.
+  
+- Content-Type : application/x-ndjson 으로 명시해야 한다.
+  
+- action : index, create, update, delete
+  - index : document 가 이미 존재할경우 replace
+  - create : document 가 이미 존재할경우 action 이 실패 
+  - index,create,update 는 다음행이 위의 요청에 대한 metadata 여야 한다.
+  
+- 한 action 이 실패하더라도, 다른 action 에 영향을 주지 않는다.
+``` 
+POST /_bulk
+{"index" : { "_index" : "products", "_id" : 200 }}
+{"name" :"Espresso Machine", "price":199", "in_stock":5}
+{"create" : { "_index": "products", "_id" : 201}}
+{"name" :"Milk": "price": 150: "in_stock" 24}
+```
+
+``` 
+POST /products/_bulk
+{"index" : { "_index" : "products", "_id" : 200 }}
+{"name" :"Espresso Machine", "price":199", "in_stock":5}
+{"create" : { "_index": "products", "_id" : 201}}
+{"name" :"Milk": "price": 150: "in_stock" 24}
+```
+
+많은 write operation 이 동시에 필요할때 유용하다. (importing data, modifying lots of data)  
+
