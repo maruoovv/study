@@ -144,4 +144,83 @@ PUT /employees
 
 #### Overview of data types
 
+- Object
+    - for any JSON Object
+    - Object 는 중첩될수 있다.
+    - Object 는 object 자체로 저장되지는 않는다. (flatten 된다.)
+    - object array 도 flatten 되기 때문에, 원래 object 에 있던 상관관계를 잃어버린다.
+```json
+[
+  {
+    "id" : 1,
+    "rating" : 4
+  },
+  {
+    "id" : 2,
+    "rating" : 10
+  }
+] 
+=> 
+{
+  "id" : [1,2],
+  "rating" : [2,10]
+}
+```
+
+따라서, id 1 을 가진 rating 5 이상을 찾고싶다. 이런 쿼리는 RDBMS 와 다르게 효율적으로 계산되지 않는다.
+    
+- Nested
+    - object type 과 유사하지만, 상관관계를 유지한다.
+    - object array 를 인덱싱 하는데 효율적이다.
+    - apache lucene 은 object type 이 없는데 어떻게 저장될까?
+        - nested object 는 hidden document 형태로 저장된다.
+        - 검색 결과로는 나오지 않는다.
+    
+    
+- keyword
+    - exact value 매칭을 위한 필드다.
+    - filtering, aggregation, sorting 을 위해 주로 사용된다.
+    - full-text search 를 위해선 이 타입 말고 text 사용하자. 
+      
+##### 왜 full-text search 로는 사용하기 부적절할까? keyword field 가 어떻게 분석되고 저장되는지 알아보자.
+
+- keyword field 는 keyword analyzer 가 사용된다.
+- keyword analyzer 는 no-op analyzer input 그대로가 output 으로 나오게 된다.
+- input 이 여러 token 으로 분리되지 않고, 전체 input 이 그대로 저장되기 때문에 (특수문자, 대/소문자 구분등도 안함..) full-text search 로는 부적절하다.
+- email 같은 exact matching 을 위해서는 사용하기 적절하다.
+
+
+
+#### Understanding arrays
+
+ES필드의 데이터는 0개 혹은 더 많이 저장될수 있기 때문에 명시적인 array 타입이란건 없다.  
+array 의 각각의 요소는 같은 data type 이기만 하면 된다.  
+
+```
+POST /products/_doc 
+{
+    "tags" : ["Tag1", "tag2"]
+}
+```
+
+다음과 같이 Document 를 생성하더라도, 맵핑은 다음과 같이 생성된다.
+
+```
+{
+    "products" : {
+        "mappings": {
+            "properties": {
+                "tags": {
+                    "type": "text"
+                }
+            }
+        }
+    }
+} 
+```
+
+그렇다면 내부적으로는 어떻게 저장되는걸까?  
+text 는 하나의 string 으로 합쳐져서 토큰으로 나뉘게 되고, 다른 타입들은 적절한 data structure 로 각각 저장이 된다.  
+
+**만약 objects array 를 사용할때 object 에 대한 쿼리가 필요하다면 nested data type 을 사용해야한다. 아니라면 object 사용 **
 
