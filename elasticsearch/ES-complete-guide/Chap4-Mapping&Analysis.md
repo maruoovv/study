@@ -224,3 +224,29 @@ text 는 하나의 string 으로 합쳐져서 토큰으로 나뉘게 되고, 다
 
 **만약 objects array 를 사용할때 object 에 대한 쿼리가 필요하다면 nested data type 을 사용해야한다. 아니라면 object 사용 **
 
+#### Date field work in ElasticSearch
+
+- formatted strings
+- milliseconds since the epoch (long)
+- seconds since the epoch (integer)
+- 내부적으로는 epoch millisecond 로 변환되어 저장된다.
+
+#### Reindexing documents with Reindex API
+
+만약 index properties 가 수정되어서 인덱스를 다시 생성한다고 하자.  
+인덱스를 다시 생성하고 기존의 인덱스에서 새 인덱스로 documents 들을 옮기려면 어떻게 해야할까?  
+별도로 스크립트를 작성할수도 있겠지만, ES 는 reindex API 를 제공한다.  
+
+```
+POST /_reindex
+{
+    "source" : {
+        "index" : "source_index"
+    },
+    "dest" : {
+        "index" : "dest_index"
+    }
+} 
+```
+
+source, dest 명시 외에도 다른 옵션들이 있으니 필요할때 살펴보자
