@@ -250,3 +250,50 @@ POST /_reindex
 ```
 
 source, dest 명시 외에도 다른 옵션들이 있으니 필요할때 살펴보자
+
+
+#### index templates
+
+인덱스 세팅과 맵핑을 명시. 새 인덱스를 생성할때 적용됨.  
+하나 또는 하나 이상의 인덱스에 적용할수 있음.
+
+```
+PUT /_template/{template_name}
+{
+    "index_patterns" : ["access-log-*"], // 적용할 대상 인덱스
+    // * 를 사용해서 여러 인덱스에 매칭 시킬수도 있고, 정확한 인덱스명을 명시할수도 있다.
+    "settings" : {
+        // index settings
+    },
+    "mappings" : {
+        // mappings
+    }
+} 
+```
+
+만약 인덱스 템플릿을 생성하고 새 인덱스를 생성할때,  
+세팅과 맵핑을 override 한다면 override 한게 적용되고, 새롭게 추가할수도 있다.  
+(기존에 이 템플릿을 사용해 생성한 인덱스는 영향 없음)
+
+
+#### introduction to dynamic mapping
+
+인덱스 설정을 명시 안하고 그냥 인덱스의 document 를 생성했을때, ES 가 자동으로 맵핑을 해준다.  
+
+|JSON|ES|
+|---|---|
+|String|text field + keyword mapping <br> date field <br> float or long|
+|integer|long|
+|floating point number|float|
+|boolean|boolean|
+|object|object|
+|array|첫 non-null value 따라감|
+
+String 이 들어왔을때 text field + keyword mapping 이 같이 생성되는 이유는 무엇일까?   
+ES 는 이 필드가 어떻게 사용될지 모르므로, full-text search 를 위한 text, 그리고 exact matching 이나 aggregation 을 위한 keyword 를 둘다 만들어준다.    
+만약 full-text search 만 필요하다면 keyword 는 불필요하게 저장되므로, 효율성을 위해선 인덱스 설정을 명시해주는게 좋다.    
+integer value 도 ES 는 얼마나 큰 수가 들어올지 모르므로, long 으로 생성된다.  
+
+
+
+dynamic and explicit mapping 두개를 섞어서도 사용할수 있다.
