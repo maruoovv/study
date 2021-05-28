@@ -295,5 +295,25 @@ ES 는 이 필드가 어떻게 사용될지 모르므로, full-text search 를 �
 integer value 도 ES 는 얼마나 큰 수가 들어올지 모르므로, long 으로 생성된다.  
 
 
-
 dynamic and explicit mapping 두개를 섞어서도 사용할수 있다.
+
+
+#### Configuring dynamic mapping
+
+index 생성시 dynamic mapping 을 사용안하게 지정할수 있다. 
+
+```
+PUT /{index}
+{
+    "mappings" : {
+        "dynamic" : false,
+        "properties" ...
+    }
+}
+```
+
+dynamic 을 false로 지정하면 새로운 필드를 무시한다.  
+문서는 생성되지만, 새로운 필드는 인덱싱 되지 않는다. 
+(인버티드 인덱스가 생성되지 않는다. 따라서 해당 필드로 쿼리 할수 없다. 하지만 _source 엔 포함된다)  
+
+dynamic 을 "strict" 로 지정하면, 맵핑안된 필드가 들어왔을때 document 생성을 reject 할수 있다.  
