@@ -317,3 +317,53 @@ dynamic 을 false로 지정하면 새로운 필드를 무시한다.
 (인버티드 인덱스가 생성되지 않는다. 따라서 해당 필드로 쿼리 할수 없다. 하지만 _source 엔 포함된다)  
 
 dynamic 을 "strict" 로 지정하면, 맵핑안된 필드가 들어왔을때 document 생성을 reject 할수 있다.  
+
+
+#### creating custom analyzer
+
+```
+POST /_analyze
+{
+"analyzer": "standard",
+"text": "<html> tes <a>asdfsdf </a> </html>"
+}
+``` 
+
+text 에 html 태그가 있는데, standard analyzer 를 사용하면 태그 스트링이 토큰으로 분류 된다.  
+이 html 태그를 제외시킬수 있을까?    
+custom anaylzer 를 만들고 사용하게 하면 가능하다. 
+
+```
+
+PUT /analyzer_test 
+{
+  "settings" : {
+    "analysis": {
+      "analyzer": {
+        "my_custom_analyzer" : { // anaylzer name
+           // configuring analyzer
+           
+           // custom 이란것을 명시
+           "type" : "custom", 
+           "char_filter" : ["html_strip"], // html tag 를 없애기 위한 필터
+           "tokenizer" : "standard",
+           "filter" : [
+             "lowercase",
+             "stop"
+            ]
+        }
+      }
+    }
+  }
+} 
+```
+
+```
+POST /analyzer_test/_analyze
+{
+  "analyzer": "my_custom_analyzer",
+  "text": "<html> tes <a>asdfsdf </a> </html>"
+} 
+```
+
+결과를 확인하면 html tag 가 제외된걸 볼수 있다.
