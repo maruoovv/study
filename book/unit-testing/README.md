@@ -324,3 +324,253 @@ YAGNI 는 현재 필요하지 않은 기능에 시간을 들이지 말라는 것
 외부 의존성을 관리하기 어려운 경우를 제외하고는 실행 구절이 여러개 있으면 안된다.  
 단위 테스트는 외부 의존성으로 작동하지 않기 때문에 절대로 여러개 구절이 있으면 안된다. 
 
+## Chap 11. 단위 테스트 안티 패턴
+
+### 비공개 메서드 단위테스트 
+널리 알려진 안티 패턴으로 비공개 메서드에 대한 단위 테스트가 있다.
+
+#### 비공개 메서드와 테스트 취약성
+단위 테스트를 하려고 비공개 메서드를 노출하는 것은 기본 원칙중 하나인 식별할 수 있는 동작만 테스트 하는것을 위반한다.  
+비공개 메서드를 노출하면 테스트가 구현 세부 사항과 결합되고 결과적으로 리팩터링 내성이 떨어진다.  
+비공개 메서드를 직접 테스트하는 대신 포괄적인 식별할 수 있는 동작으로서 간접적으로 테스트 하는 것이 좋다. 
+
+#### 비공개 메서드와 불필요한 커버리지
+때로 비공개 메서드가 너무 복잡혀서 포괄적인 테스트로 충분한 커버리지를 얻을 수 없는 경우가 있다.  
+비공개 메서드가 복잡하면 별도의 클래스로 도출해야 하는 추상화가 누락됐다는 징후로 볼 수 있다.  
+
+#### 비공개 메서드 테스트가 타당한 경우
+비공개 메서드를 테스트 하기 타당한 경우가 있다.  
+책에서는 이 예를 ORM 을 사용하는 클래스를 든다.
+
+```C#
+public class Inquiry {
+    public bool IsApproved {get; private set;}
+    public DateTime? TimeApproved {get; private set;}
+    
+    private Inquiry (bool isApproved, DateTime? timeApproved) {
+        if (isApproved && !timeApproved.HasValue) throw new Exception();
+        
+        IsApproved = isApproved;
+        TimeApproved = timeApproved;
+    }
+    
+    public void Approve(DateTime now) {
+        if (IsApproved) return;
+        
+        IsApproved = true;
+        TimeApproved = now;
+    }
+} 
+```
+
+해당 ORM 라이브러리는 공개 생성자가 필요하지 않으며, 시스템은 이 조회를 만들어낼 책임이 없기 때문에 생성자가 필요하지 않다.  
+하지만 이 객체의 도메인 로직은 분명히 중요하므로 단위 테스트를 해야하는데, 그때문에 생성자를 공개하는 것은 비공개 메서드를 노출하지 않는 규칙을 위반하게 된다.  
+
+Inquiry 생성자는 비공개이면서 식별할 수 있는 동작인 메서드의 예다. 따라서 이러한 경우에 생성자를 공개한다고 해서 테스트가 쉽게 깨지지는 않는다.  
+
+### 비공개 상태 노출
+또 다른 일반적인 안티 패턴으로 단위 테스트 목적으로만 비공개 상태를 노출하는 것이 있다.  
+테스트는 제품 코드와 정확히 같은 방식으로 테스트 대상 시스템과 상호 작용해야 하며, 특별한 권한이 따로 있어서는 안된다.  
+
+```C#
+public class Customer {
+    private CustomerStatus _status = CustomerStatus.Regular;
+    
+    public void Promote() {
+        _status = CustomerStatus.Preferred;
+    }
+    
+    public decimal GetDiscount() {
+        return _status == CustomerStatus.Preferred ? 0.05m : 0;
+    }
+    
+}
+public enum CustomerStatus {
+    Regular,
+    Preferred
+} 
+```
+
+이런 코드가 있을때 Promote() 메서드를 어떻게 테스트 해야할까? 메서드 내부에서 필드를 변경하는데, 해당 필드는 비공개이므로 테스트할 수 없다.  
+이 필드를 공개하여 테스트 하고 싶다는 생각이 들것이다.  
+하지만 이는 안티패턴이다. _status 필드는 비공개이므로 식별할 수 있는 동작이 아니다. 해당 필드를 공개하면 테스트가 구현 세부 사항에 결합된다.  
+그렇다면 어떻게 테스트 해야할까?  
+
+그 방법은 제품 코드가 이 클래스를 어떻게 사용하는지를 살펴보는 것이다.  
+만약 제품 코드가 고객의 상태 (status) 를 신경쓴다면 해당 필드가 공개되어야 하는 것이고 (테스트 관점이 아닌 제품 코드 관점에서) 아니라면 공개되면 안된다.  
+현재 제품 코드가 이 클래스에 대한 관심사는 할인 정보이기 떄문에 고객 상태에 따른 할인 정보에 대해서 테스트를 한다.  
+만약 이후 제품 코드가 고객 상태 필드를 사용하게 된다면, 그때는 테스트에서 해당 필드를 테스트 할수 있을 것이다.  
+
+### 테스트로 유출된 도메인 지식 
+도메인 지식을 테스트로 유출하는 것은 또 하나의 흔한 안티 패턴이다.  
+다음은 잘못된 테스트 방법을 보여준다.
+
+```c#
+public static class Caculator {
+    public static int Add(int value1, int value2) {
+        return value1 + value2;
+    }
+}
+
+public class CaculatorTests {
+    [Fact]
+    public void Adding_two_numbers() {
+        int value1 = 1;
+        int value2 = 3;
+        int expected = value1 + value2;
+        
+        int actual = Caculator.Add(value1, value2);
+        
+        Assert.Equal(expected, actual);
+    }
+    
+    // 매개변수화 버전
+    [Theory]
+    [InlineData(1,3)]
+    [InlineData(11,33)]
+    public void Adding_two_numbers(int value1, int value2) {
+        int expected = value1 + value2;
+        
+        int actual = Caculator.Add(value1, value2);
+        
+        Assert.Equal(expected, actual);
+    }
+}
+```
+
+위 예제는 처음에는 괜찮아 보이지만 사실은 안티 패턴이다.  
+제품 코드에서 알고리즘 구현 부분을 복사했는데, 구현 세부 사항과 결합 되는 또 다른 예이다.  
+이런 테스트는 리팩터링 내성 지표에서 거의 0점을 받게 되고 타당한 실패와 거짓 양성을 구별할 가능성이 없다.  
+알고리즘 변경으로 인해 테스트가 실패하면 개발 팀은 원인을 파악하려고 노력하지 않으며 새 버전의 알고리즘을 테스트에 복사할 가능성이 높다.  
+
+테스트를 작성할 때 특정 구현을 암시하지 말라.
+
+```c#
+public class CaculatorTests {
+    // 매개변수화 버전
+    [Theory]
+    [InlineData(1,3,4)]
+    [InlineData(11,33,44)]
+    public void Adding_two_numbers(int value1, int value2, int expected) {
+        int actual = Caculator.Add(value1, value2);
+        
+        Assert.Equal(expected, actual);
+    }
+}
+```
+
+처음에는 직관적이지 않아 보일 수 있지만, 단위 테스트는 예상 결과를 하드 코딩 하는 것이 좋다.
+
+
+### 코드 오염
+코드 오염은 테스트에만 필요한 제품 코드를 추가 하는 것이다.  
+코드 오염은 다양한 유형의 스위치 형태를 취한다
+
+```c# 
+public class Logger {
+    private readonly bool _isTestEnvironment;
+    
+    public Logger(bool isTestEnvironment) {
+        _isTestEnvironment = isTestEnvironment;
+    }
+    
+    public void Log(string text) {
+        if (_isTestEnvironment)
+            return;
+            
+        // log...
+    }
+}
+```
+위 예제는 클래스가 운영환경에서 실행되는지, 테스트 환경에서 실행 되는지 여부를 나타내는 변수가 있다.  
+이런 코드의 문제는 테스트 코드와 제품 코드가 혼재되어 유지비가 증가하는 것이다. 테스트 코드를 제품 코드와 분리해야 한다.  
+위와 같은 경우 상위 인터페이스를 도입하여 운영을 위한 구현제, 테스트를 목적으로 하는 가짜 구현체를 만들어라.  
+
+### 구체 클래스를 목으로 처리하기 
+구체 클래스를 목으로 처리해서 때때로 유용할 수 있지만, 이는 단일 책임 원칙을 위배하는 중대한 단점이 있다. 
+프로세스 외부 의존성을 호출하는 클래스가 있다고 하자.
+```
+public class StatisticsCalculator {
+
+    public (double weight, double totalCost) Calculate(int customerId) {
+        List<DeliveryRecord> records = GetDeliveries(customerId);
+        double totalWeight = records.Sum(x => x.Weight);
+        double totalCost = records.Sum(x => x.Cost);
+        
+        return (totalWeight, totalCost);
+    }
+    
+    public List<DeliveryRecord> GetDeliveries(int customerId) {
+        // 프로세스 외부 의존성을 호출
+    }
+} 
+
+public class CustomerController {
+    private readonly StatisticsCalculator _calculator;
+    
+    public CustomerController(StatisticsCalculator calculator) {
+        _calculator = calculator;
+    }
+    
+    public string GetStatistics(int customerId) {
+        (double totalWeight, double totalCost) = _calculator.Calculate(customerId);
+        
+        return 
+            $"total weight delivered : {totalWeight}. " +
+            $"total cost : {totalCost}";
+    }
+}
+```
+
+위의 예제에서 컨트롤러를 어떻게 테스트 해야할까?  
+실제 StatisticsCalculator 인스턴스는 비관리 프로세스 외부 의존성을 참조하기 때문에 직접 넣을수는 없다.  
+비관리 의존성을 스텁으로 대체하면서 StatisticsCalculator 를 완전히 교체하고 싶지는 않다.  
+해결 방법중 하나는 StatisticsCalculator 를 목으로 처리하고 GetDeliveries() 메서드를 재정의 하는 것이다.  
+하지만 이는 안티 패턴이다. 
+
+> 일부 기능을 지키려고 구체 클래스를 목으로 처리해야 한다면 단일 책임 원칙을 위반하는 결과다.
+
+StatisticsCalculator 는 비관리 의존성과 통신하는 책임, 통계를 계산하는 책임이 서로 관련이 없음에도 결합되어 있다.  
+이 두 책임을 별도 클래스로 분할한다.
+
+```
+public class DeliveryGateway : IDeliveryGateway {
+    public List<DeliveryRecord> GetDeliveries(int customerId) {
+        // 외부 의존성 호출
+    }
+}
+
+public class StatisticsCalculator {
+
+    public (double weight, double totalCost) Calculate(List<DeliveryRecord> records) {
+        double totalWeight = records.Sum(x => x.Weight);
+        double totalCost = records.Sum(x => x.Cost);
+        
+        return (totalWeight, totalCost);
+    }
+    
+}
+
+public class CustomerController {
+    private readonly StatisticsCalculator _calculator;
+    private readonly IDeliveryGateway _gateway;
+    
+    public CustomerController(StatisticsCalculator calculator, IDeliveryGateway gateway) {
+        _calculator = calculator;
+        _gateway = gateway;
+    }
+    
+    public string GetStatistics(int customerId) {
+    
+        var records = _gateway.GetDeliveries(customerId);
+        (double totalWeight, double totalCost) = _calculator.Calculate(records);
+        
+        return 
+            $"total weight delivered : {totalWeight}. " +
+            $"total cost : {totalCost}";
+    }
+}
+``` 
+
+비관리 의존성과 통신하는 책임을 DeliveryGateway 에 넘겼고, 이는 상위 인터페이스가 있으므로 테스트 코드에서 구체 클래스 대신 인터페이스를 목으로 사용할 수 있다.  
+이는 위에서 살펴봤던 험블 객체 디자인 패턴의 실제 예이다. 
